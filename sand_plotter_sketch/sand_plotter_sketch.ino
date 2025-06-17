@@ -4,14 +4,15 @@
 
 // circle size radius = 100 units
 
-#define enPin_rot 12      // Stepper motor enable pin
-#define lights_pin 11      // Stepper motor enable pin
+#define enPin_rot 8      // Stepper motor enable pin
 #define stepPin_rot 2    // X axis step pin
 #define dirPin_rot 5     // X axis direction pin
 #define enPin_InOut 8    // Stepper motor enable pin
 #define stepPin_InOut 3  // Y axis step pin
 #define dirPin_InOut 6   // Y axis direction pin
-#define PI 3.1415926535897932384626433832795
+
+
+#define lights_pin 11      // Stepper motor enable pin
 
 
 // Changable variables.
