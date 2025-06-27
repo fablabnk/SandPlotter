@@ -81,8 +81,8 @@ int pwm2 = 0;
 uint8_t linDirection = OUT;
 uint8_t rotDirection = CCW;
 
-int linSpeed = 1000;
-int rotSpeed = 500;
+int linSpeed = 1000; // 1000
+int rotSpeed = 500; // 500
 
 void plotShape(const Shape& shape) {
   for (uint16_t i = 0; i < shape.size; i++) {
