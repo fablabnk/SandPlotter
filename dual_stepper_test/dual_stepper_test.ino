@@ -6,7 +6,7 @@ const int enablePinA = 8;
 // Stepper B pins
 const int stepPinB = 3;
 const int dirPinB = 6;
-const int enablePinB = 9;
+const int enablePinB = 8;
 
 bool dirStateA = LOW;
 bool dirStateB = LOW;
