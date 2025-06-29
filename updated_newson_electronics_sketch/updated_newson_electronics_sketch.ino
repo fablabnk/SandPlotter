@@ -4,18 +4,16 @@
 // JULY 10,2024
 
 
-#include <Adafruit_NeoPixel.h>
-
 
 int state = 1;                                         // used to determine if inOut motor changes direction
 int count = 0;                                         // Count the number of pedels.
 
 int time=0;
 int pause_time = 3000;                                 // Time for delay between patturn sequence
-byte knobs = 0;
-byte drawing=0;
-byte clearing=0;
-byte clearInOut=0;
+uint8_t knobs = 0;
+uint8_t drawing=0;
+uint8_t clearing=0;
+uint8_t clearInOut=0;
 
 int xt=0;
 
@@ -24,17 +22,17 @@ int xt=0;
 #define Sync_Time 3000
 #define One_Time 1000
 #define Zero_Time 400
-volatile byte Bit_Count = 0;
-volatile byte Byte_Count = 0;
-volatile byte Byte_Ready = false;
-volatile byte IR_Bytes[4];
+volatile uint8_t Bit_Count = 0;
+volatile uint8_t Byte_Count = 0;
+volatile uint8_t Byte_Ready = false;
+volatile uint8_t IR_Bytes[4];
 volatile unsigned long Start_Time = 0;
 volatile unsigned long Pulse_Width;
 //IR variables
 
 // circle size radius = 100 units
-byte pause = 0;
-#define enPin_rot 8     // Stepper motor enable pin
+uint8_t pause = 0;
+#define enPin_rot 8      // Stepper motor enable pin
 #define stepPin_rot 2    // X axis step pin
 #define dirPin_rot 5     // X axis direction pin
 #define enPin_InOut 8    // Stepper motor enable pin
@@ -50,9 +48,9 @@ byte pause = 0;
 #define desired_scale 100.0
 
 
-int knob1 = 0;         // POT 1 : LED BRIGHTNESS
-int knob2 = 0;         // POT 2 : DRAW SPEED
-int brightness = 0;  // Starting brightness for LEDs MAX IS 255
+int gKnobBrightness = 0;         // POT 1 : LED BRIGHTNESS
+int gKnobMotorSpeed = 0;         // POT 2 : DRAW SPEED
+int gBrightness = 0;             // Starting brightness for LEDs MAX IS 255
 float speed_delay = 1;
 
 
@@ -77,8 +75,8 @@ int inOutSteps = 0;  /// Y
 int inOutStepsTo = 0;
 int rotSteps = 0;  //  X
 int rotStepsTo = 0;
-byte rotON = 0;
-byte inOutON = 0;
+uint8_t rotON = 0;
+uint8_t inOutON = 0;
 
 int ratio_select = 7;
 
@@ -89,8 +87,8 @@ float rTo, angleTo;
 int pwm = 0;   // ROT MOTOR PWM
 int pwm2 = 0;  // INOUT MOTOR PWM
 
-byte inOut = 1;  // 1=OUT, 0=IN
-byte ccwCW = 1;  // 0=CCW 1=CW
+uint8_t inOut = 1;  // 1=OUT, 0=IN
+uint8_t ccwCW = 1;  // 0=CCW 1=CW
 
 int speed_InOut = 100;  // speed of second motor
 int speed_rot = 100;    // speed of first motor
@@ -226,9 +224,9 @@ void motor_ratios(int r, int t) //r=rotation speed, // t= arm speed
 
 while (rotON == 1||inOutON == 1)
 {
- read_pots();
-   speed_rot = r * speed_delay;
-    speed_InOut = t * speed_delay;
+  read_pots();
+  speed_rot = r * speed_delay;
+  speed_InOut = t * speed_delay;
      
  display();
  calculate_xy(); // keep track of the location as it moves
@@ -494,13 +492,13 @@ void reverseKinematics(float xx, float yy) {
 }
 
 void read_pots() {
-  knob1 = analogRead(A0);  // Pot on the left FOR BRIGHTNESS
-  knob2 = analogRead(A1);  // Pot on the right FOR DRAWING speed
-  brightness = map(knob1, 0, 1023, 255, 0);
-  analogWrite(lights_pin, brightness);
+  gKnobBrightness = analogRead(A0);  // Pot on the left FOR BRIGHTNESS
+  gKnobMotorSpeed = analogRead(A1);  // Pot on the right FOR DRAWING speed
+  gBrightness = map(gKnobBrightness, 0, 1023, 255, 254);
+  // analogWrite(lights_pin, brightness);
   
   
-  speed_delay = map(knob2, 0, 1023, 50, 2000);  // MIN SPEED IS 40MS FOR MOTORS TO WORK.
+  speed_delay = map(gKnobMotorSpeed, 0, 1023, 50, 2000);  // MIN SPEED IS 40MS FOR MOTORS TO WORK.
   
   
   
@@ -513,7 +511,7 @@ void read_pots() {
   
 
 if (drawing== 1) {
-  speed_delay = map(knob2, 0, 1023, 100, 2000);  // MIN SPEED IS 40MS FOR MOTORS TO WORK.
+  speed_delay = map(gKnobMotorSpeed, 0, 1023, 100, 2000);  // MIN SPEED IS 40MS FOR MOTORS TO WORK.
     speed_rot = speed_delay;
     speed_InOut = speed_delay;
   }
@@ -521,8 +519,8 @@ if (drawing== 1) {
 
 
 
-if (knob2 == 1023) pause=1;
-///if (knob2 < 1023&&time>2) pause=1;
+if (gKnobMotorSpeed == 1023) pause=1;
+///if (gKnobMotorSpeed < 1023&&time>2) pause=1;
 
 while (pause == 1) {
   
@@ -532,17 +530,17 @@ while (pause == 1) {
 //rotON=0;
 
     
-    knob1 = analogRead(A0);                // Pot on the left Patturn
-    knob2 = analogRead(A1); 
-    analogWrite(lights_pin, brightness);
-    brightness = map(knob1, 0, 1023, 255, 0);
+    gKnobBrightness = analogRead(A0);                // Pot on the left Patturn
+    gKnobMotorSpeed = analogRead(A1); 
+    // analogWrite(lights_pin, brightness);
+    gBrightness = map(gKnobBrightness, 0, 1023, 255, 0);
 display();
        delay(100);
     if (time>0) time=time+1;
     
 
     // turn off pause if turned knob or exceeded pause time. 
-    if ((knob2 < 1023&&time==0)||time>pause_time||(knob2 == 1023&&time>1)) 
+    if ((gKnobMotorSpeed < 1023&&time==0)||time>pause_time||(gKnobMotorSpeed == 1023&&time>1)) 
     {  
         // inOutON=1;//
 //rotON=1;
@@ -754,17 +752,17 @@ ISR(PCINT0_vect) {
       // Check for valid header
       if ((IR_Bytes[0] == 0x00) && (IR_Bytes[1] == 0xFF)) {
         // Decode command byte
-        byte button = IR_Bytes[2];
+        uint8_t button = IR_Bytes[2];
         // Serial.print("button="); // print the value of the button if you use a different controller.
         // Serial.println(button);
-        if (button == 24) brightness = brightness + 10;  //up
-        if (button == 82) brightness = brightness - 10;  // down
+        if (button == 24) gBrightness = gBrightness + 10;  //up
+        if (button == 82) gBrightness = gBrightness - 10;  // down
         if (button == 90) pause = !pause;                // right
         if (button == 8) pause = !pause;                 // left
 
         if (button == 28) pause = !pause;                // ok button
-        if (button == 22) brightness = brightness - 10;  // *
-        if (button == 13) brightness = brightness + 10;  // #
+        if (button == 22) gBrightness = gBrightness - 10;  // *
+        if (button == 13) gBrightness = gBrightness + 10;  // #
 
         // Numbers
       
