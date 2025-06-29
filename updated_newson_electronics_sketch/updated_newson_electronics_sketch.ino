@@ -3,17 +3,20 @@
 // it's great way to learn the mathematics of art. 
 // JULY 10,2024
 
+#include <FastLED.h>
 
+const uint8_t gStripLen = 71u;
+const uint8_t gLedPin = 11u;
+CRGB gLedStrip[gStripLen];
 
-int state = 1;                                         // used to determine if inOut motor changes direction
+int gDirection = 1;                                         // used to determine if inOut motor changes direction
 int count = 0;                                         // Count the number of pedels.
 
 int time=0;
-int pause_time = 3000;                                 // Time for delay between patturn sequence
-uint8_t knobs = 0;
-uint8_t drawing=0;
-uint8_t clearing=0;
-uint8_t clearInOut=0;
+int gPauseMs = 3000;                                 // Time for delay between patturn sequence
+uint8_t gKnobs = 0;
+uint8_t gDrawingInProgress=0;
+uint8_t gClearingInProgress=0;
 
 int xt=0;
 
@@ -32,15 +35,12 @@ volatile unsigned long Pulse_Width;
 
 // circle size radius = 100 units
 uint8_t pause = 0;
-#define enPin_rot 8      // Stepper motor enable pin
-#define stepPin_rot 2    // X axis step pin
-#define dirPin_rot 5     // X axis direction pin
-#define enPin_InOut 8    // Stepper motor enable pin
-#define stepPin_InOut 3  // Y axis step pin
-#define dirPin_InOut 6   // Y axis direction pin
-
-
-#define lights_pin 11    //z switch
+const uint8_t gRotMotorEnPin = 8;      // Stepper motor enable pin
+const uint8_t gRotMotorStepPin = 2;    // X axis step pin
+const uint8_t gRotMotorDirPin = 5;     // X axis direction pin
+const uint8_t gLinMotorEnPin = 8;    // Stepper motor enable pin
+const uint8_t gLinMotorStepPin = 3;  // Y axis step pin
+const uint8_t gLinMotorDirPin = 6;   // Y axis direction pin
 
 // Changable variables.
 #define rot_total_steps 32000.0     // 16000.0
@@ -107,7 +107,7 @@ int spiral[]={3,0,-7,4,-14,-5,-6,-16,8,-11,7,6,-10,10,-19,-7,-5,-22,15,-11,10,11
 
 
 //int star[] = {73, -68, 73, -68} ;
-int maze[] = {73, -68, 73, -68, 73, -60, 60, -60, 60, -80, 59, -81, 55, -84, 50, -87, 46, -89, 46, -89, 46, -87, 33, -87, 33, -95, 30, -96, 26, -97, 21, -98, 16, -99, 11, -100, 6, -100, 6, -100, 6, -87, 20, -87, 20, -74, 6, -74, 6, -60, 33, -60, 33, -74, 46, -74, 46, -34, 33, -34, 33, -47, 6, -47, 6, -34, 20, -34, 20, -20, 6, -20, 6, -7, 33, -7, 33, -20, 46, -20, 46, -7, 73, -7, 73, -20, 60, -20, 60, -47, 73, -47, 73, -34, 86, -34, 86, -47, 88, -47, 90, -44, 92, -39, 93, -35, 95, -30, 96, -25, 97, -20, 97, -20, 86, -20, 86, -7, 99, -7, 99, -5, 99, 0, 99, 5, 99, 10, 98, 15, 97, 20, 97, 20, 86, 20, 86, 6, 60, 6, 60, 20, 73, 20, 73, 33, 60, 33, 60, 46, 86, 46, 86, 33, 94, 33, 92, 37, 90, 42, 88, 46, 86, 50, 83, 55, 80, 59, 77, 63, 74, 66, 71, 70, 67, 73, 63, 76, 60, 80, 60, 80, 60, 73, 67, 73, 69, 71, 73, 67, 73, 67, 73, 60, 33, 60, 33, 73, 46, 73, 46, 88, 42, 90, 37, 92, 33, 94, 33, 94, 33, 86, 20, 86, 20, 97, 16, 98, 11, 99, 6, 99, 6, 99, 6, 73, 20, 73, 20, 60, 6, 60, 6, 33, 20, 33, 20, 46, 46, 46, 46, 33, 33, 33, 33, 20, 46, 20, 46, 6, 20, 6, 20, 20, 6, 20, 6, 6, -7, 6, -7, 20, -20, 20, -20, 6, -47, 6, -47, 20, -34, 20, -34, 33, -47, 33, -47, 46, -20, 46, -20, 33, -7, 33, -7, 60, -20, 60, -20, 73, -7, 73, -7, 99, -11, 99, -16, 98, -20, 97, -20, 97, -20, 86, -34, 86, -34, 94, -38, 92, -43, 90, -47, 88, -47, 88, -47, 73, -34, 73, -34, 60, -74, 60, -74, 67, -72, 69, -68, 73, -68, 73, -60, 73, -60, 80, -64, 77, -68, 73, -71, 70, -75, 66, -78, 63, -81, 59, -84, 55, -86, 51, -89, 46, -91, 42, -93, 37, -95, 33, -95, 33, -87, 33, -87, 46, -60, 46, -60, 33, -74, 33, -74, 20, -60, 20, -60, 6, -87, 6, -87, 20, -98, 20, -99, 17, -100, 12, -100, 8, -100, 3, -100, -2, -100, -7, -100, -7, -87, -7, -87, -20, -98, -20, -98, -24, -96, -29, -95, -34, -93, -38, -91, -43, -89, -47, -89, -47, -87, -47, -87, -34, -74, -34, -74, -47, -60, -47, -60, -20, -74, -20, -74, -7, -47, -7, -47, -20, -34, -20, -34, -7, -7, -7, -7, -20, -20, -20, -20, -34, -7, -34, -7, -47, -34, -47, -34, -34, -47, -34, -47, -74, -34, -74, -34, -60, -7, -60, -7, -74, -20, -74, -20, -87, -7, -87, -7, -100, -10, -100, -15, -99, -20, -99, -24, -98, -29, -96, -34, -95, -34, -95, -34, -87, -47, -87, -47, -89, -48, -88, -52, -86, -57, -83, -60, -80, -60, -80, -60, -60, -74, -60, -74, -68, -71, -71, -71, -71};
+ int maze[] = {}; // {73, -68, 73, -68, 73, -60, 60, -60, 60, -80, 59, -81, 55, -84, 50, -87, 46, -89, 46, -89, 46, -87, 33, -87, 33, -95, 30, -96, 26, -97, 21, -98, 16, -99, 11, -100, 6, -100, 6, -100, 6, -87, 20, -87, 20, -74, 6, -74, 6, -60, 33, -60, 33, -74, 46, -74, 46, -34, 33, -34, 33, -47, 6, -47, 6, -34, 20, -34, 20, -20, 6, -20, 6, -7, 33, -7, 33, -20, 46, -20, 46, -7, 73, -7, 73, -20, 60, -20, 60, -47, 73, -47, 73, -34, 86, -34, 86, -47, 88, -47, 90, -44, 92, -39, 93, -35, 95, -30, 96, -25, 97, -20, 97, -20, 86, -20, 86, -7, 99, -7, 99, -5, 99, 0, 99, 5, 99, 10, 98, 15, 97, 20, 97, 20, 86, 20, 86, 6, 60, 6, 60, 20, 73, 20, 73, 33, 60, 33, 60, 46, 86, 46, 86, 33, 94, 33, 92, 37, 90, 42, 88, 46, 86, 50, 83, 55, 80, 59, 77, 63, 74, 66, 71, 70, 67, 73, 63, 76, 60, 80, 60, 80, 60, 73, 67, 73, 69, 71, 73, 67, 73, 67, 73, 60, 33, 60, 33, 73, 46, 73, 46, 88, 42, 90, 37, 92, 33, 94, 33, 94, 33, 86, 20, 86, 20, 97, 16, 98, 11, 99, 6, 99, 6, 99, 6, 73, 20, 73, 20, 60, 6, 60, 6, 33, 20, 33, 20, 46, 46, 46, 46, 33, 33, 33, 33, 20, 46, 20, 46, 6, 20, 6, 20, 20, 6, 20, 6, 6, -7, 6, -7, 20, -20, 20, -20, 6, -47, 6, -47, 20, -34, 20, -34, 33, -47, 33, -47, 46, -20, 46, -20, 33, -7, 33, -7, 60, -20, 60, -20, 73, -7, 73, -7, 99, -11, 99, -16, 98, -20, 97, -20, 97, -20, 86, -34, 86, -34, 94, -38, 92, -43, 90, -47, 88, -47, 88, -47, 73, -34, 73, -34, 60, -74, 60, -74, 67, -72, 69, -68, 73, -68, 73, -60, 73, -60, 80, -64, 77, -68, 73, -71, 70, -75, 66, -78, 63, -81, 59, -84, 55, -86, 51, -89, 46, -91, 42, -93, 37, -95, 33, -95, 33, -87, 33, -87, 46, -60, 46, -60, 33, -74, 33, -74, 20, -60, 20, -60, 6, -87, 6, -87, 20, -98, 20, -99, 17, -100, 12, -100, 8, -100, 3, -100, -2, -100, -7, -100, -7, -87, -7, -87, -20, -98, -20, -98, -24, -96, -29, -95, -34, -93, -38, -91, -43, -89, -47, -89, -47, -87, -47, -87, -34, -74, -34, -74, -47, -60, -47, -60, -20, -74, -20, -74, -7, -47, -7, -47, -20, -34, -20, -34, -7, -7, -7, -7, -20, -20, -20, -20, -34, -7, -34, -7, -47, -34, -47, -34, -34, -47, -34, -47, -74, -34, -74, -34, -60, -7, -60, -7, -74, -20, -74, -20, -87, -7, -87, -7, -100, -10, -100, -15, -99, -20, -99, -24, -98, -29, -96, -34, -95, -34, -95, -34, -87, -47, -87, -47, -89, -48, -88, -52, -86, -57, -83, -60, -80, -60, -80, -60, -60, -74, -60, -74, -68, -71, -71, -71, -71};
 
 
 // rot speed:inOut speed numbers 1 to 9 1= fast, 9 = slow
@@ -121,7 +121,7 @@ void spirographWithSquare(float s, float d) // s = Side length of the square, d 
     int numPoints = 300; // Number of points for the spirograph
     float R = 90; // Radius of the fixed circle
 
-    drawing = 1; // Start drawing
+    gDrawingInProgress = 1; // Start drawing
 
     for (int i = 0; i < numPoints; i++) {
         // Calculate the angle for this point
@@ -150,7 +150,7 @@ void spirographWithSquare(float s, float d) // s = Side length of the square, d 
         gotoXY(x, y);
     }
 
-    drawing = 0; // Stop drawing
+    gDrawingInProgress = 0; // Stop drawing
 
     // Add a delay before starting the next pattern if needed
     // delay(100);
@@ -166,7 +166,7 @@ float R = 80; // Radius of the fixed circle
  for (int i = 0; i < numPoints; i++) {
     // Parameters for the spirograph pattern
     // Calculate the angle for this point
-   drawing=1;
+   gDrawingInProgress=1;
     float angle = 6 * PI * i / numPoints;
 
     // Calculate the spirograph coordinates
@@ -186,7 +186,7 @@ float R = 80; // Radius of the fixed circle
 
   }
 
-drawing=0;
+gDrawingInProgress=0;
   // Add a delay before starting the next pattern
  // delay(100);
 
@@ -201,11 +201,11 @@ void motor_ratios(int r, int t) //r=rotation speed, // t= arm speed
 
   x=0;
   y=0;
-   digitalWrite(dirPin_rot, HIGH);  // CW rotation
+   digitalWrite(gRotMotorDirPin, HIGH);  // CW rotation
   read_pots();
-   knobs=1;
+   gKnobs=1;
    //moving=0;
-   //drawing=0;
+   //gDrawingInProgress=0;
    inOut = 1;  // 1=OUT, 0=IN
  ccwCW = 1;  // 0=CCW 1=CW
   
@@ -244,7 +244,7 @@ while (rotON == 1||inOutON == 1)
 {
     rotON = 0;
     inOutON = 0;
-    knobs = 0;
+    gKnobs = 0;
     count = 0;
     // moving = 0;
 }
@@ -252,7 +252,7 @@ while (rotON == 1||inOutON == 1)
 
 }
 
-   knobs=0;
+   gKnobs=0;
    count = 0;
 
 
@@ -274,9 +274,9 @@ void calculate_xy()
 void clear_from_out()
 {
   moveTo(0,100);
-knobs=1;
+gKnobs=1;
 ccwCW=0;
-digitalWrite(dirPin_rot, ccwCW);
+digitalWrite(gRotMotorDirPin, ccwCW);
 
  rotON = 1;
   inOutON = 1;
@@ -285,11 +285,11 @@ digitalWrite(dirPin_rot, ccwCW);
     display();
     read_pots();
     speed_rot= 1 * speed_delay;
-speed_InOut=9 * speed_delay;
+    speed_InOut=9 * speed_delay;
     calculate_xy();
   }
-  knobs=0;
-   rotON = 0;
+  gKnobs=0;
+  rotON = 0;
   inOutON = 0;
 
 }
@@ -306,25 +306,25 @@ void clear_from_in()
 
 // HOMING JUST MOVED IN AS FAR AS POSSIBLE NO SENSOR NEEDED
 void homing() {
-  digitalWrite(enPin_InOut, LOW);   // Enable the stepper motor
-  digitalWrite(dirPin_InOut, 1);    // Set direction to go in
+  digitalWrite(gLinMotorEnPin, LOW);   // Enable the stepper motor
+  digitalWrite(gLinMotorDirPin, 1);    // Set direction to go in
   for (int x = 0; x < inOut_total_steps; x++) {  // BLIND - DON'T KNOW HOW FAR TO GO IN GO IN TOTAL STEPS = 0,0
-    digitalWrite(stepPin_InOut, HIGH);
+    digitalWrite(gLinMotorStepPin, HIGH);
     delayMicroseconds(100);
-    digitalWrite(stepPin_InOut, LOW);
+    digitalWrite(gLinMotorStepPin, LOW);
     delayMicroseconds(100);
   }
   inOut = 1;
   inOutON = 1;
 
 
-  digitalWrite(dirPin_InOut, 0);  // Set direction TO OUT
+  digitalWrite(gLinMotorDirPin, 0);  // Set direction TO OUT
 }
 
 
 
 void plotShape(int shape[], int size) {
-drawing=1;
+gDrawingInProgress=1;
   for (int t = 0; t < (size / 2); t++)  // size of array div 2.
   {
     // if (button > 0) { return; }
@@ -335,7 +335,7 @@ drawing=1;
     Serial.println(y2);
     gotoXY(x2, y2);  //shift data left and down 50 units to make gride x100 by y100
   }
-  drawing=0;// finished drawing patturn
+  gDrawingInProgress=0;// finished drawing patturn
 }
 
 // go to a specific point using iterpolation
@@ -375,7 +375,7 @@ void gotoXY(float targetX, float targetY) {
 // move to a point without interpolation.
 void moveTo(float x4, float y4) {
 
-  //digitalWrite(enPin_InOut, HIGH);   // Enable the stepper motor
+  //digitalWrite(gLinMotorEnPin, HIGH);   // Enable the stepper motor
   x2 = x4;
   y2 = y4;
   reverseKinematics(x4, y4);
@@ -392,39 +392,32 @@ void moveTo(float x4, float y4) {
 
 
 void display() {
-
-  if (moving == 1) calculate_xy();
+  if (moving == 1) {
+    calculate_xy();
+  }
  
-
   Serial.print(time);
   Serial.print(" \ ");
   Serial.print(count);
   Serial.print(" \ ");
-   Serial.print(knobs);
+  Serial.print(gKnobs);
   Serial.print(" \ ");
  
-    Serial.print(speed_rot);
+  Serial.print(speed_rot);
   Serial.print(",");
   Serial.print(speed_InOut);
   Serial.print(",");
-
-
-
-
   Serial.print(offset);
   Serial.print(" *  ");
   Serial.print(inOutON);
   Serial.print(",");
   Serial.print(rotON);
   Serial.print(" *  ");
-  
 
   Serial.print(x);
   Serial.print("x,y");
   Serial.print(y);
   Serial.print(" ");
-
-
 
   Serial.print(rotSteps);
   Serial.print(">");
@@ -435,10 +428,6 @@ void display() {
   Serial.print(">");
 
   Serial.print(inOutStepsTo);
-  // Serial.print(" (");
-  //Serial.print(x2);
-  //Serial.print(",");
-  //Serial.print(y2);
   Serial.println("");
 }
 
@@ -474,20 +463,20 @@ void reverseKinematics(float xx, float yy) {
   if (inOutSteps == inOutStepsTo) { inOutON = 0; }
   if (inOutSteps > inOutStepsTo) {
     inOut = 0;
-    digitalWrite(dirPin_InOut, !inOut);
+    digitalWrite(gLinMotorDirPin, !inOut);
   }  // go in
   if (inOutSteps < inOutStepsTo) {
     inOut = 1;
-    digitalWrite(dirPin_InOut, !inOut);
+    digitalWrite(gLinMotorDirPin, !inOut);
   }  // go out
 
   // determine if to go CW or CCW
   if ((rotStepsTo > rotSteps && (rotStepsTo - rotSteps < rot_total_steps / 2)) || (rotStepsTo < rotSteps && (rotSteps - rotStepsTo > rot_total_steps / 2))) {
     ccwCW = 0;
-    digitalWrite(dirPin_rot, ccwCW);  // Set direction
+    digitalWrite(gRotMotorDirPin, ccwCW);  // Set direction
   } else {
     ccwCW = 1;
-    digitalWrite(dirPin_rot, ccwCW);  // Set direction
+    digitalWrite(gRotMotorDirPin, ccwCW);  // Set direction
   }
 }
 
@@ -495,8 +484,6 @@ void read_pots() {
   gKnobBrightness = analogRead(A0);  // Pot on the left FOR BRIGHTNESS
   gKnobMotorSpeed = analogRead(A1);  // Pot on the right FOR DRAWING speed
   gBrightness = map(gKnobBrightness, 0, 1023, 255, 254);
-  // analogWrite(lights_pin, brightness);
-  
   
   speed_delay = map(gKnobMotorSpeed, 0, 1023, 50, 2000);  // MIN SPEED IS 40MS FOR MOTORS TO WORK.
   
@@ -510,7 +497,7 @@ void read_pots() {
 
   
 
-if (drawing== 1) {
+if (gDrawingInProgress== 1) {
   speed_delay = map(gKnobMotorSpeed, 0, 1023, 100, 2000);  // MIN SPEED IS 40MS FOR MOTORS TO WORK.
     speed_rot = speed_delay;
     speed_InOut = speed_delay;
@@ -524,15 +511,14 @@ if (gKnobMotorSpeed == 1023) pause=1;
 
 while (pause == 1) {
   
-    digitalWrite(enPin_InOut, HIGH);  // BOTH MOTORS OFF
-    digitalWrite(enPin_rot, HIGH);    
+    digitalWrite(gLinMotorEnPin, HIGH);  // BOTH MOTORS OFF
+    digitalWrite(gRotMotorEnPin, HIGH);    
     //inOutON=0;//
 //rotON=0;
 
     
     gKnobBrightness = analogRead(A0);                // Pot on the left Patturn
-    gKnobMotorSpeed = analogRead(A1); 
-    // analogWrite(lights_pin, brightness);
+    gKnobMotorSpeed = analogRead(A1);
     gBrightness = map(gKnobBrightness, 0, 1023, 255, 0);
 display();
        delay(100);
@@ -540,14 +526,14 @@ display();
     
 
     // turn off pause if turned knob or exceeded pause time. 
-    if ((gKnobMotorSpeed < 1023&&time==0)||time>pause_time||(gKnobMotorSpeed == 1023&&time>1)) 
+    if ((gKnobMotorSpeed < 1023&&time==0)||time>gPauseMs||(gKnobMotorSpeed == 1023&&time>1)) 
     {  
         // inOutON=1;//
 //rotON=1;
     pause=0;
     time=0;
-    digitalWrite(enPin_InOut, LOW);  // BOTH MOTORS ON
-    digitalWrite(enPin_rot, LOW);    //
+    digitalWrite(gLinMotorEnPin, LOW);  // BOTH MOTORS ON
+    digitalWrite(gRotMotorEnPin, LOW);    //
    
 
 
@@ -589,35 +575,43 @@ void setup() {
   TIMSK1 |= B00000110;  // only use one interupt
 
   // Define pins as outputs
-  pinMode(stepPin_rot, OUTPUT);
-  pinMode(dirPin_rot, OUTPUT);
-  pinMode(stepPin_InOut, OUTPUT);
-  pinMode(dirPin_InOut, OUTPUT);
-  pinMode(enPin_InOut, OUTPUT);
-  pinMode(enPin_rot, OUTPUT);
-  pinMode(lights_pin, OUTPUT);
-  digitalWrite(enPin_InOut, LOW);  // BOTH MOTORS ON
-  digitalWrite(enPin_rot, LOW);    //
+  pinMode(gRotMotorStepPin, OUTPUT);
+  pinMode(gRotMotorDirPin, OUTPUT);
+  pinMode(gLinMotorStepPin, OUTPUT);
+  pinMode(gLinMotorDirPin, OUTPUT);
+  pinMode(gLinMotorEnPin, OUTPUT);
+  pinMode(gRotMotorEnPin, OUTPUT);
+  pinMode(gLedPin, OUTPUT);
+  digitalWrite(gLinMotorEnPin, LOW);  // BOTH MOTORS ON
+  digitalWrite(gRotMotorEnPin, LOW);    //
 
   Serial.begin(9600);
   Serial.println("sTARting ");
-  digitalWrite(dirPin_InOut, 0);  // Set direction
+  digitalWrite(gLinMotorDirPin, 0);  // Set direction
   display();
   homing();
 
  
-  digitalWrite(enPin_InOut, LOW);  // BOTH MOTORS ON
-  digitalWrite(enPin_rot, LOW);    //
+  digitalWrite(gLinMotorEnPin, LOW);  // BOTH MOTORS ON
+  digitalWrite(gRotMotorEnPin, LOW);    //
   Serial.println("READY ");
 
   rotON = 0;
   inOutON = 0;
-  digitalWrite(dirPin_rot, HIGH);  // CW rotation
-  display();
+  digitalWrite(gRotMotorDirPin, HIGH);  // CW rotation
+  // display();
+
+  FastLED.addLeds<WS2812, gLedPin, GRB>(gLedStrip, gStripLen);
+  FastLED.clear();
+  FastLED.show();
 }
 
 void loop() {
   read_pots();
+  
+  // Set all LEDs to red
+  fill_solid(gLedStrip, gStripLen, CRGB(gBrightness, 0u, gBrightness));
+  FastLED.show();
 
 // // you can change the order of patterns
 // clear_from_in();
@@ -658,7 +652,7 @@ void loop() {
       moving = !moving;
     }
     if (command == 'w') {               // change dir of x motor
-      digitalWrite(dirPin_rot, ccwCW);  // Set direction
+      digitalWrite(gRotMotorDirPin, ccwCW);  // Set direction
       ccwCW = !ccwCW;
     }
     if (command == 'e') {  // change dir of x motor
@@ -672,7 +666,7 @@ void loop() {
       moving = !moving;
     }
     if (command == 's') {                 // change dir of x motor
-      digitalWrite(dirPin_InOut, inOut);  // Set direction
+      digitalWrite(gLinMotorDirPin, inOut);  // Set direction
       inOut = !inOut;
     }
     if (command == 'd') {  // change dir of x motor
@@ -682,7 +676,7 @@ void loop() {
       speed_InOut += 50;
     }
     if (command == '1') {
-      knobs = !knobs;
+      gKnobs = !gKnobs;
       inOutON = 1;
       rotON = 1;
     }
@@ -779,68 +773,66 @@ ISR(PCINT0_vect) {
 // ISR for the rotational motor
 ISR(TIMER1_COMPA_vect) {
   OCR1A += speed_rot;  // Advance the COMPA register
-
-
-
   if (rotON == 1 && pause == 0) {
     pwm = !pwm;
-    digitalWrite(stepPin_rot, pwm);  // ONE STEP OF ROT MOTOR
-
+    digitalWrite(gRotMotorStepPin, pwm);  // ONE STEP OF ROT MOTOR
     //uncloment later
     if (offset == 0 && inOutON == 0 && rotON == 1) {  // If only Rot motor is on composinate for inout motor direction is opposite rot direction
-      digitalWrite(stepPin_InOut, HIGH);
-      digitalWrite(dirPin_InOut, !ccwCW);  // Set direction opposite rot motor
+      digitalWrite(gLinMotorStepPin, HIGH);
+      digitalWrite(gLinMotorDirPin, !ccwCW);  // Set direction opposite rot motor
     }
-
-
-
     if (pwm == 0) {
       offset += 1;  // track each step of rot
-
       if (ccwCW == 1) {
         rotSteps -= 1;
-        //digitalWrite(dirPin_rot, HIGH);
+        //digitalWrite(gRotMotorDirPin, HIGH);
         if (offset >= 10) {  //after 10 steps compinstate for inout motor
           offset = 0;
-          if (inOutON == 1 && rotON == 1) inOutSteps -= 1;
-          if (inOutON == 0 && rotON == 1) digitalWrite(stepPin_InOut, LOW);
+          if (inOutON == 1 && rotON == 1) {
+            inOutSteps -= 1;
+          }
+          if (inOutON == 0 && rotON == 1) {
+            digitalWrite(gLinMotorStepPin, LOW);
+          }
         }
 
-      } else {
+      }
+      else {
         rotSteps += 1;
-        //  digitalWrite(dirPin_rot, LOW);
+        //  digitalWrite(gRotMotorDirPin, LOW);
         if (offset >= 10) {
           offset = 0;
-          if (inOutON == 1 && rotON == 1) inOutSteps += 1;
-          if (inOutON == 0 && rotON == 1) digitalWrite(stepPin_InOut, LOW);
+          if (inOutON == 1 && rotON == 1) {
+            inOutSteps += 1;
+          }
+          if (inOutON == 0 && rotON == 1) {
+            digitalWrite(gLinMotorStepPin, LOW);
+          }
         }
       }
-
-
-
       // Adjust the direction if limits are reached (note sure if needed?)
       if (inOutSteps > inOut_total_steps) {
         inOut = 0;
-        digitalWrite(dirPin_InOut, HIGH);  // Set direction
+        digitalWrite(gLinMotorDirPin, HIGH);  // Set direction
       } else if (inOutSteps < 0) {
         inOut = 1;
-        digitalWrite(dirPin_InOut, LOW);  // Set direction
+        digitalWrite(gLinMotorDirPin, LOW);  // Set direction
       }
-
-
       // Wrap-around conditions for rotational steps
-      if (rotSteps > rot_total_steps) rotSteps = 0;
-      else if (rotSteps < 0) rotSteps = rot_total_steps - 1;
-
+      if (rotSteps > rot_total_steps) {
+        rotSteps = 0;
+      }
+      else if (rotSteps < 0) {
+        rotSteps = rot_total_steps - 1;
+      }
       radAngle = (rotSteps / rot_total_steps) * (2 * PI);  // Update angles
       rotAngle = (rotSteps / rot_total_steps) * 360.0;
-
-
-
-
-      if (rotSteps == rotStepsTo && knobs == 0&&moving==0&&clearing==0) { rotON = 0; }  // turn off motor if it reaches the set point
-
-      if (inOutSteps == inOutStepsTo && knobs == 0&&moving==0&&clearing==0) inOutON = 0;
+      if (rotSteps == rotStepsTo && gKnobs == 0&&moving==0&&gClearingInProgress==0) {
+        rotON = 0;
+      }  // turn off motor if it reaches the set point
+      if (inOutSteps == inOutStepsTo && gKnobs == 0&&moving==0&&gClearingInProgress==0) {
+        inOutON = 0;
+      }
     }
   }
 }
@@ -848,48 +840,32 @@ ISR(TIMER1_COMPA_vect) {
 // ISR for the in/out motor
 ISR(TIMER1_COMPB_vect) {
   OCR1B += speed_InOut;  // Advance the COMPB register
-
   if (inOutON == 1&&pause==0) {
     pwm2 = !pwm2;
-
-
-    if (inOut == 0) digitalWrite(dirPin_InOut, HIGH);  // Set direction
-    if (inOut == 1) digitalWrite(dirPin_InOut, LOW);   // Set direction
-
-    digitalWrite(stepPin_InOut, pwm2);
-
-
-
-
-
-
-
+    if (inOut == 0) digitalWrite(gLinMotorDirPin, HIGH);  // Set direction
+    if (inOut == 1) digitalWrite(gLinMotorDirPin, LOW);   // Set direction
+    digitalWrite(gLinMotorStepPin, pwm2);
     if (pwm2 == 0) {
       // Set the direction based on the target steps
-
       // Update in/out steps based on the direction
       if (inOut == 1) inOutSteps++;
       else inOutSteps--;
-
-      if (inOutSteps == inOutStepsTo && knobs == 0&&moving==0&&clearing==0) { inOutON = 0; }  //offset=0;
-
-
+      if (inOutSteps == inOutStepsTo && gKnobs == 0&&moving==0&&gClearingInProgress==0) {
+        inOutON = 0;  //offset=0;
+      }
       // Adjust the direction if limits are reached
       if (inOutSteps > inOut_total_steps) {
         inOut = 0;
-        digitalWrite(dirPin_InOut, HIGH);  // Set direction
-      } else if (inOutSteps < 0) {
-        inOut = 1;
-        digitalWrite(dirPin_InOut, LOW);  // Set direction
+        digitalWrite(gLinMotorDirPin, HIGH);  // Set direction
       }
-      if (knobs == 1) {
-
-        if (state != inOut) count += 1;
-        state = inOut;
-      }  
-
-
-        
+      else if (inOutSteps < 0) {
+        inOut = 1;
+        digitalWrite(gLinMotorDirPin, LOW);  // Set direction
+      }
+      if (gKnobs == 1) {
+        if (gDirection != inOut) count += 1;
+        gDirection = inOut;
+      }
     }
   }
 }
